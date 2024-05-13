@@ -1,25 +1,224 @@
 plugins {
-	id 'java'
-	id 'org.springframework.boot' version '3.2.5'
-	id 'io.spring.dependency-management' version '1.1.4'
+    id('idea')
+    id('java')
+    id('jacoco')
+    id('com.adarshr.test-logger') version('4.0.0')
+    id('org.springframework.boot') version('3.2.5')
+    id('io.spring.dependency-management') version('1.1.4')
+}
+
+sourceSets {
+
+    unit {
+        java {
+            srcDirs(file('src/test/unit/java'))
+        }
+
+        resources {
+            srcDirs(file("src/test/unit/resources"))
+        }
+
+        compileClasspath += main.output
+        runtimeClasspath += main.output
+
+    }
+
+    integration {
+
+        java {
+            srcDirs(file('src/test/integration/java'))
+        }
+
+        resources {
+            srcDirs(file('src/test/integration/resources'))
+        }
+
+        compileClasspath += main.output
+        runtimeClasspath += main.output
+
+    }
+
+    test {
+        java {
+            srcDirs()
+        }
+    }
+
+}
+
+configurations {
+
+    unitImplementation {
+        extendsFrom(testImplementation)
+    }
+
+    unitRuntimeOnly {
+        extendsFrom(testRuntimeOnly)
+    }
+
+    unitCompileOnly {
+        extendsFrom(testCompileOnly)
+    }
+
+    integrationImplementation {
+        extendsFrom(testImplementation)
+    }
+
+    integrationRuntimeOnly {
+        extendsFrom(testRuntimeOnly)
+    }
+
+    integrationCompileOnly {
+        extendsFrom(testCompileOnly)
+    }
+
+}
+
+idea {
+    module {
+        testSources.from(
+            sourceSets.unit.java.srcDirs,
+            sourceSets.integration.java.srcDirs,
+        )
+    }
+}
+
+tasks.register('unit', Test)
+tasks.register('integration', Test)
+tasks.register('junitTestReport', TestReport)
+tasks.register('jacocoUnitTestReport', JacocoReport)
+tasks.register('jacocoIntegrationTestReport', JacocoReport)
+
+unit {
+
+    useJUnitPlatform()
+
+    setTestClassesDirs(sourceSets.unit.output.classesDirs)
+    setClasspath(sourceSets.unit.runtimeClasspath)
+
+    reports {
+        html.outputLocation.set(
+            file('build/reports/junit/unit')
+        )
+    }
+
+    finalizedBy(
+        jacocoUnitTestReport,
+        jacocoTestReport,
+        junitTestReport
+    )
+
+}
+
+integration {
+
+    useJUnitPlatform()
+
+    setTestClassesDirs(sourceSets.integration.output.classesDirs)
+    setClasspath(sourceSets.integration.runtimeClasspath)
+
+    reports {
+        html.outputLocation.set(
+            file('build/reports/junit/integration')
+        )
+    }
+
+    finalizedBy(
+        jacocoIntegrationTestReport,
+        jacocoTestReport,
+        junitTestReport
+    )
+
+    shouldRunAfter(unit)
+
+}
+
+test {
+    dependsOn(unit, integration)
+}
+
+jacocoUnitTestReport {
+
+    executionData(unit)
+    sourceSets(sourceSets.main)
+
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(
+            file('build/reports/jacoco/unit')
+        )
+    }
+
+    shouldRunAfter(unit)
+
+}
+
+jacocoIntegrationTestReport {
+
+    executionData(integration)
+    sourceSets(sourceSets.main)
+
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(
+            file('build/reports/jacoco/integration')
+        )
+    }
+
+    shouldRunAfter(integration)
+
+}
+
+jacocoTestReport {
+
+    executionData(unit, integration)
+    sourceSets(sourceSets.main)
+
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(
+            file('build/reports/jacoco/test')
+        )
+    }
+
+    shouldRunAfter(
+        jacocoUnitTestReport,
+        jacocoIntegrationTestReport
+    )
+
+}
+
+junitTestReport {
+
+    destinationDirectory.set(
+        file('build/reports/junit/test'),
+    )
+
+    testResults.from(
+        file('build/test-results/unit/binary'),
+        file('build/test-results/integration/binary')
+    )
+
+    shouldRunAfter(unit, integration)
+
+}
+
+testlogger {
+    theme('mocha')
+}
+
+java {
+    sourceCompatibility = '21'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation('org.springframework.boot:spring-boot-starter')
+    testImplementation('org.springframework.boot:spring-boot-starter-test')
 }
 
 group = 'sportex'
 version = '0.0.1-SNAPSHOT'
-
-java {
-	sourceCompatibility = '21'
-}
-
-repositories {
-	mavenCentral()
-}
-
-dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-}
-
-tasks.named('test') {
-	useJUnitPlatform()
-}
