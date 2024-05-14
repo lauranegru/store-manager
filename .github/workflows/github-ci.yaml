@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Unit Test
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Java
@@ -20,14 +20,14 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Execute Unit Tests
+        run: ./gradlew unit
 
   integration:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Integration Test
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Java
@@ -39,14 +39,14 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Execute Integration Tests
+        run: ./gradlew integration
 
   acceptance:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Acceptance Test
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Java
@@ -58,8 +58,8 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Execute Acceptance Tests
+        run: ./gradlew acceptance
 
   build:
     needs: [unit, integration, acceptance]
@@ -79,7 +79,4 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build with Gradle
-        run: ./gradlew build
-
-
-
+        run: ./gradlew build -x test

@@ -38,6 +38,21 @@ sourceSets {
 
     }
 
+    acceptance {
+
+        java {
+            srcDirs(file('src/test/acceptance/java'))
+        }
+
+        resources {
+            srcDirs(file('src/test/acceptance/resources'))
+        }
+
+        compileClasspath += main.output
+        runtimeClasspath += main.output
+
+    }
+
     test {
         java {
             srcDirs()
@@ -72,6 +87,18 @@ configurations {
         extendsFrom(testCompileOnly)
     }
 
+    acceptanceImplementation {
+        extendsFrom(testImplementation)
+    }
+
+    acceptanceRuntimeOnly {
+        extendsFrom(testRuntimeOnly)
+    }
+
+    acceptanceCompileOnly {
+        extendsFrom(testCompileOnly)
+    }
+
 }
 
 idea {
@@ -79,15 +106,18 @@ idea {
         testSources.from(
             sourceSets.unit.java.srcDirs,
             sourceSets.integration.java.srcDirs,
+            sourceSets.acceptance.java.srcDirs,
         )
     }
 }
 
 tasks.register('unit', Test)
 tasks.register('integration', Test)
+tasks.register('acceptance', Test)
 tasks.register('junitTestReport', TestReport)
 tasks.register('jacocoUnitTestReport', JacocoReport)
 tasks.register('jacocoIntegrationTestReport', JacocoReport)
+tasks.register('jacocoAcceptanceTestReport', JacocoReport)
 
 unit {
 
@@ -133,8 +163,45 @@ integration {
 
 }
 
+acceptance {
+
+    useJUnitPlatform()
+
+    setTestClassesDirs(sourceSets.acceptance.output.classesDirs)
+    setClasspath(sourceSets.acceptance.runtimeClasspath)
+
+    systemProperty('cucumber.plugin', 'pretty, html:build/reports/cucumber/report.html')
+
+    reports {
+        html.outputLocation.set(
+            file('build/reports/junit/acceptance')
+        )
+    }
+
+    testLogging {
+        events("STANDARD_OUT")
+    }
+
+    testlogger {
+        showExceptions(false)
+        showPassed(false)
+        showSkipped(false)
+        showFailed(false)
+        showSummary(false)
+    }
+
+    finalizedBy(
+        jacocoAcceptanceTestReport,
+        jacocoTestReport,
+        junitTestReport
+    )
+
+    shouldRunAfter(integration)
+
+}
+
 test {
-    dependsOn(unit, integration)
+    dependsOn(unit, integration, acceptance)
 }
 
 jacocoUnitTestReport {
@@ -169,9 +236,25 @@ jacocoIntegrationTestReport {
 
 }
 
+jacocoAcceptanceTestReport {
+
+    executionData(acceptance)
+    sourceSets(sourceSets.main)
+
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(
+            file('build/reports/jacoco/acceptance')
+        )
+    }
+
+    shouldRunAfter(acceptance)
+
+}
+
 jacocoTestReport {
 
-    executionData(unit, integration)
+    executionData(unit, integration, acceptance)
     sourceSets(sourceSets.main)
 
     reports {
@@ -183,7 +266,8 @@ jacocoTestReport {
 
     shouldRunAfter(
         jacocoUnitTestReport,
-        jacocoIntegrationTestReport
+        jacocoIntegrationTestReport,
+        jacocoAcceptanceTestReport
     )
 
 }
@@ -196,10 +280,11 @@ junitTestReport {
 
     testResults.from(
         file('build/test-results/unit/binary'),
-        file('build/test-results/integration/binary')
+        file('build/test-results/integration/binary'),
+        file('build/test-results/acceptance/binary')
     )
 
-    shouldRunAfter(unit, integration)
+    shouldRunAfter(unit, integration, acceptance)
 
 }
 
@@ -208,16 +293,28 @@ testlogger {
 }
 
 java {
-    sourceCompatibility = '21'
+    sourceCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
     mavenCentral()
 }
 
+dependencyManagement {
+    imports {
+        mavenBom('io.cucumber:cucumber-bom:7.17.0')
+    }
+}
+
 dependencies {
     implementation('org.springframework.boot:spring-boot-starter')
+
     testImplementation('org.springframework.boot:spring-boot-starter-test')
+
+    acceptanceImplementation('io.cucumber:cucumber-java')
+    acceptanceImplementation('io.cucumber:cucumber-spring')
+    acceptanceImplementation('io.cucumber:cucumber-junit-platform-engine')
+    acceptanceImplementation("org.junit.platform:junit-platform-suite")
 }
 
 group = 'sportex'
